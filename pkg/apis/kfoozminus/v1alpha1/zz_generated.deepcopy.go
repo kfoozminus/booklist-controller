@@ -44,7 +44,7 @@ func (in *Jackpot) DeepCopyObject() runtime.Object {
 func (in *JackpotList) DeepCopyInto(out *JackpotList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Jackpot, len(*in))
