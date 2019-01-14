@@ -1,0 +1,10 @@
+hash: 596c493e7519a08771a115260348b6c4776e6ab4b9900fcc59fe2a1fd11880c9
+updated: 2019-01-14T07:14:38.064201905+06:00
+imports:
+- name: k8s.io/apimachinery
+  version: 9c4c366543346abeca2a5cd2c40cf1a30d19a2ec
+  subpackages:
+  - pkg/apis/meta/v1
+- name: k8s.io/code-generator
+  version: 3a2206dd6a78497deceb3ae058417fdeb2036c7e
+testImports: []

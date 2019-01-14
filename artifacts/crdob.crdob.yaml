@@ -1,0 +1,8 @@
+apiVersion: "kfoozminus.com/v1alpha1"
+kind: Jackpot
+metadata:
+  name: jackpot-01
+spec:
+  image: kfoozminus/booklist:alpine
+  replicas: 1
+

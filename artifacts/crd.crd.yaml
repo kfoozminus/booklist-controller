@@ -1,0 +1,19 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: jackpot.kfoozminus.com
+spec:
+  group: kfoozminus.com
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+  scope: Namespaced
+  names:
+    plural: jackpots
+    singular: jackpot
+    kind: Jackpot
+    listKind: JackpotList
+    shortNames:
+    - jp
+
