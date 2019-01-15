@@ -3,6 +3,7 @@ kind: Jackpot
 metadata:
   name: jackpot-obj
 spec:
+  DeploymentName: booklist-controller
   image: kfoozminus/booklist:alpine
   replicas: 1
 

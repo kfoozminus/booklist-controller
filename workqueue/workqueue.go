@@ -96,7 +96,7 @@ func (c *Controller) handleErr(err error, key interface{}) {
 
 	c.queue.Forget(key)
 	utilruntime.HandleError(err)
-	fmt.Println("Retried 5 time - dropping the jackpot")
+	fmt.Println("Retried 5 times - dropping the jackpot")
 }
 
 func main() {

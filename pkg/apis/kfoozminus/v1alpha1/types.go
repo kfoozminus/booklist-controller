@@ -17,8 +17,9 @@ type Jackpot struct {
 }
 
 type JackpotSpec struct {
-	Image    string `json:"image,omitempty"`
-	Replicas *int32 `json:"replicas,omitempty"`
+	DeploymentName string `json:"deploymentName"`
+	Image          string `json:"image,omitempty"`
+	Replicas       *int32 `json:"replicas,omitempty"`
 }
 
 type JackpotStatus struct {
