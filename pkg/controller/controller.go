@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	kfoozminusv1alpha1 "github.com/kfoozminus/booklist-controller/pkg/apis/kfoozminus/v1alpha1"
 	"github.com/kfoozminus/booklist-controller/pkg/client/clientset/versioned"
 	informerv1alpha1 "github.com/kfoozminus/booklist-controller/pkg/client/informers/externalversions/kfoozminus/v1alpha1"
 	listerv1alpha1 "github.com/kfoozminus/booklist-controller/pkg/client/listers/kfoozminus/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -18,7 +21,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
-	kfoozminusv1alpha1 "github.com/kfoozminus/booklist-controller/pkg/apis/kfoozminus/v1alpha1"
 )
 
 type Controller struct {
@@ -31,7 +33,7 @@ type Controller struct {
 	jackpotsLister listerv1alpha1.JackpotLister
 	jackpotsSynced cache.InformerSynced
 
-	workqueue workqueue.RateLimingInterface
+	workqueue workqueue.RateLimitingInterface
 }
 
 func NewController(
@@ -43,18 +45,18 @@ func NewController(
 		jackInterface:     jackclientset,
 		deploymentsLister: deploymentInformer.Lister(),
 		deploymentsSynced: deploymentInformer.Informer().HasSynced,
-		jackpotsLister:    JackpotInformer.Lister(),
-		jackpotsSynced:    JackpotInformer.Informer(), HasSynced,
-		workqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "JackJack"),
+		jackpotsLister:    jackpotInformer.Lister(),
+		jackpotsSynced:    jackpotInformer.Informer().HasSynced,
+		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "JackJack"),
 	}
 
-	jackpotInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFunc{
+	jackpotInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.handleJackpot,
 		UpdateFunc: func(old, new interface{}) {
 			controller.handleJackpot(new)
 		},
 	})
-	deploymentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFunc{
+	deploymentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.handleDeployment,
 		UpdateFunc: func(old, new interface{}) {
 			newDeployment := new.(*appsv1.Deployment)
@@ -113,12 +115,12 @@ func (c *Controller) processNextWorkItem() bool {
 
 		if err := c.syncHandler(key); err != nil {
 			c.workqueue.AddRateLimited(key)
-			return fmt.Errorf("error syncing %s", key)
+			return fmt.Errorf("error while syncing %s", key)
 		}
 
 		//c.workqueue.Forget(key)
 		c.workqueue.Forget(obj)
-		fmt.Println("Finished syncing", key)
+		fmt.Println("Successfully synced", key)
 		return nil
 	}(obj)
 
@@ -146,6 +148,7 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	deploymentName := jackpot.Spec.DeploymentName
+	fmt.Println(deploymentName)
 	if deploymentName == "" {
 		utilruntime.HandleError(fmt.Errorf("%s: deployment name must be specified", key))
 		return nil
@@ -161,15 +164,14 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	if !metav1.IsControlledBy(deployment, jackpot) {
-		msg := fmt.Sprintf(MessageResourceExists, deployment.Name)
-		return fmt.Errorf(msg)
+		return fmt.Errorf("Resource already exists and is not managed by Jackpot")
 	}
 
 	if jackpot.Spec.Replicas != nil && *jackpot.Spec.Replicas != *deployment.Spec.Replicas {
 		deployment, err = c.kubeInterface.AppsV1().Deployments(jackpot.Namespace).Update(newDeployment(jackpot))
 	}
 
-	err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -181,10 +183,10 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) updateStatus(jackpot *samplev1alpha1.Jackpot, deployment *appsv1.Deployment) error {
+func (c *Controller) updateStatus(jackpot *kfoozminusv1alpha1.Jackpot, deployment *appsv1.Deployment) error {
 	jackpotCopy := jackpot.DeepCopy()
 	jackpotCopy.Status.AvailableReplicas = deployment.Status.AvailableReplicas
-	_, err := c.sampleclientset.SamplecontrollerV1alpha1().Jackpots(jackpot.Namespace).Update(jackpotCopy)
+	_, err := c.jackInterface.KfoozminusV1alpha1().Jackpots(jackpot.Namespace).Update(jackpotCopy)
 	return err
 }
 
@@ -214,13 +216,13 @@ func (c *Controller) handleDeployment(obj interface{}) {
 		}
 		fmt.Printf("Recovered deleted object '%s' from tombstone", object.GetName())
 	}
-	fmt.Printf("Processing object: %s", object.GetName())
+	fmt.Printf("Processing object: %s\n", object.GetName())
 	if ownerRef := metav1.GetControllerOf(object); ownerRef != nil {
 		if ownerRef.Kind != "Jackpot" {
 			return
 		}
 
-		foo, err := c.foosLister.Foos(object.GetNamespace()).Get(ownerRef.Name)
+		jackpot, err := c.jackpotsLister.Jackpots(object.GetNamespace()).Get(ownerRef.Name)
 		if err != nil {
 			klog.V(4).Infof("ignoring orphaned object '%s' of foo '%s'", object.GetSelfLink(), ownerRef.Name)
 			return
