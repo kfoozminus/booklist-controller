@@ -8,6 +8,7 @@ import (
 
 	"github.com/kfoozminus/booklist-controller/pkg/client/clientset/versioned"
 	jackinformers "github.com/kfoozminus/booklist-controller/pkg/client/informers/externalversions"
+	"github.com/kfoozminus/booklist-controller/pkg/controller"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -40,7 +41,7 @@ func main() {
 	kubeInformerFactory := informers.NewSharedInformerFactory(kubeclientset, time.Second*10)
 	jackInformerFactory := jackinformers.NewSharedInformerFactory(jackclientset, time.Second*10)
 
-	controller := NewController(kubeclientset, jackclientset, kubeInformerFactory.Apps().V1().Deployments(), jackInformerFactory.Kfoozminus().V1alpha1().Jackpots())
+	controller := controller.NewController(kubeclientset, jackclientset, kubeInformerFactory.Apps().V1().Deployments(), jackInformerFactory.Kfoozminus().V1alpha1().Jackpots())
 
 	stopCh := make(chan struct{})
 	kubeInformerFactory.Start(stopCh)
